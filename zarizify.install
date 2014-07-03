@@ -3,17 +3,17 @@
  * hook_enable()
  */
 function zarizify_enable() {
-	// the master branch nid, to be added to existing content
-	$master_branch_nid = variable_get('zariz_master_branch', 0);
+  // the master branch nid, to be added to existing content
+  $master_branch_nid = variable_get('zariz_master_branch', 0);
 
-	if ($master_branch_nid == 0) {
-		// create the master branch
-		$master_node = zariz_create_branch('live');
-		$master_branch_nid = $master_node->nid;
-	}
+  if ($master_branch_nid == 0) {
+    // create the master branch
+    $master_node = zariz_create_branch('live');
+    $master_branch_nid = $master_node->nid;
+  }
 
-	// set up og field values
-	$og_field = og_fields_info(OG_AUDIENCE_FIELD);
+  // set up og field values
+  $og_field = og_fields_info(OG_AUDIENCE_FIELD);
   $og_field['field']['cardinality'] = 1;
   $og_field['field']['settings']['handler'] = 'og';
   $og_field['instance']['default_value_function'] = 'entityreference_prepopulate_field_default_value';
@@ -31,32 +31,32 @@ function zarizify_enable() {
   );
 
   // for each {content_type} (except 'branch', 'article')
-  $types = db_select('node_type', 'nt')
-  	->fields('nt', array('type'))
-  	->condition('nt.type', 'article', '!=')
-  	->condition('nt.type', 'branch', '!=')
-  	->execute()
-  	->fetchAssoc();
+  $types = db_query('SELECT type FROM {node_type} WHERE type NOT IN (:types)', array(':types' => array('article', 'branch')))
+    ->fetchAll();
 
   foreach ($types as $content_type) {
-  	// add zariz branch fields
-  	og_create_field('field_branch', 'node', $content_type, $og_field);
+    // add zariz branch fields
+    og_create_field('field_branch', 'node', $content_type->type, $og_field);
+    $types_array[] = $content_type->type;
   }
-    
+
+  // include Articles when updating content
+  $types_array[] = 'article';
+
   // assign all existing content to the master branch
   // EFQ for nid's of type: $types
   $query = new EntityFieldQuery();
-	$query->entityCondition('entity_type', 'node')
-	  ->entityCondition('bundle', $types, 'IN')
-	  ->addMetaData('account', user_load(1)); // Run the query as user 1.
-	$result = $query->execute();
-	if (isset($result['node'])) {
-	  $nids = array_keys($result['node']);
-	  $nodes = entity_load('node', $nids);
-	  foreach ($nodes as $node) {
-	  	$wrapper = entity_metadata_wrapper('node', $node);
-	  	$wrapper->field_branch->set($master_branch_nid);
-	  	$wrapper->save();
-	  }
-	}
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', $types, 'IN')
+    ->addMetaData('account', user_load(1)); // Run the query as user 1.
+  $result = $query->execute();
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    $nodes = entity_load('node', $nids);
+    foreach ($nodes as $node) {
+      $wrapper = entity_metadata_wrapper('node', $node);
+      $wrapper->field_branch->set($master_branch_nid);
+      $wrapper->save();
+    }
+  }
 }
