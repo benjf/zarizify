@@ -44,10 +44,10 @@ function zarizify_enable() {
   $types_array[] = 'article';
 
   // assign all existing content to the master branch
-  // EFQ for nid's of type: $types
+  // EFQ for nid's of type: $types_array
   $query = new EntityFieldQuery();
   $query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle', $types, 'IN')
+    ->entityCondition('bundle', $types_array, 'IN')
     ->addMetaData('account', user_load(1)); // Run the query as user 1.
   $result = $query->execute();
   if (isset($result['node'])) {
