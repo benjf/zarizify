@@ -1,0 +1,4 @@
+name = Zarizify
+description = "Zarizify" existing content.
+core = 7.x
+dependencies[] = zariz
